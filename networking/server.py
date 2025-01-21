@@ -20,6 +20,10 @@ if __name__=="__main__":
         print(f"Accepted connection with {addy}")
         received_string = ""
 
+        # Send connection notification to client
+        connection.sendall("Server is connected, what is your message?".encode())
+        print("Sent connection confirmation to client")
+
         # Receive blocks of 16 bytes
         buffer_size = 16
 
@@ -32,8 +36,8 @@ if __name__=="__main__":
         print(f"Received string: {received_string}")
 
         connection.sendall("Server received".encode())
-        print("Sending confirmation to client...")
+        print("Sent receipt confirmation to client")
 
         # Close connection
         connection.close()
-        print("Connection closed")
+        print("Connection closed, listening for another...")
