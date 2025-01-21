@@ -1,40 +1,63 @@
 import socket
 
-BUFFER_SIZE = 16
+def connect_to_server(ip = "127.0.0.1", port = 14000, verbose = True):
+    """Connect to server at given ip on given port
 
-# Receive encoded string from server on specified socket s
-def recv_string(s):
+    Args:
+        ip (str): ip address of server
+        port (int): port number of server
+        verbose (bool, optional): Turn on print statements. Defaults to True.
+    """
+    # Create a TCP/IP socket object
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if verbose: print("Socket created successfully")
+
+    # Connect to given port
+    s.connect((ip, port))
+    if verbose: print(f"Socket connected to {ip} port no. {port}")
+
+    return s
+
+def recv_str(s, buffer_size = 16, verbose = True):
+    """Receive string from server
+
+    Args:
+        s (socket.socket): socket to receive string from
+
+    Returns:
+        str: Received string
+    """
     received_string = ""
     while True:
-        byte_block = s.recv(BUFFER_SIZE)
+        byte_block = s.recv(buffer_size)
         string_block = byte_block.decode()
         received_string+=string_block
-        if len(byte_block)<BUFFER_SIZE:
+        if len(byte_block)<buffer_size:
             break
-    print(f"Server says: {received_string}")
+    if verbose: print(f"Received string: {received_string}")
 
     return received_string
 
+def send_str(s, str, verbose = True):
+    
+    # Send encoded message
+    s.sendall(str.encode())
+    if verbose: print(f"Sent message: '{str}'")
+
 if __name__=="__main__":
     
-    # Create a TCP/IP socket object
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print("Socket created successfully")
+    s = connect_to_server()
 
-    # Connect to given port
-    s.connect(("127.0.0.1", 14000))
-    print(f"Socket connected to {'127.0.0.1'} port no. {14000}")
+    while True:
+        # Receive opening message from server
+        recv_str(s)
 
-    # Receive opening message from server
-    recv_string(s)
+        # Prompt message
+        string = input("What message would you like to send?\n")
 
-    # Prompt message
-    string = input("What message would you like to send?\n")
+        # Send string
+        send_str(s, string)
 
-    # Send encoded message
-    print(f"Sending message: '{string}'")
-    s.sendall(string.encode())
-
-    # Receive confirmation from server
-    recv_string(s)
-    
+        # Receive confirmation from server
+        recv_str(s)
+        
