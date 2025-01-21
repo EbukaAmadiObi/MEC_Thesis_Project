@@ -1,2 +1,4 @@
 # Ignore the entire folder
-welcome-to-docker/
+venv/
+!/knn_classifier/knn_dataset.csv
+!/knn_classifier/KNN_classifierl.pkl
