@@ -12,11 +12,13 @@ def receive_string(s, buffer_size = 16):
         byte_block = connection.recv(buffer_size)
         string_block = byte_block.decode()
         received_string+=string_block
-        print(f"Received block: {string_block}")
         if len(byte_block)<buffer_size:
             break
+    print(f"Received {received_string}")
+
     # Close connection
     connection.close()
+    print("Connection closed")
 
     return received_string
 
