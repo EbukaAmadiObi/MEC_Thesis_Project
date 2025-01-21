@@ -3,7 +3,8 @@ import socket
 def receive_string(s, buffer_size = 16):
 
     # When found, create connection object and string for received text
-    connection, _ = s.accept()
+    connection, addy = s.accept()
+    print(f"Accepted connection with {addy}")
     received_string = ""
 
     # Receive blocks of 16 bytes
@@ -35,6 +36,3 @@ if __name__=="__main__":
 
     while True:
         test = receive_string(s)
-        if test != "quit":
-            print(test)
-            print("again!")

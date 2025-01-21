@@ -15,14 +15,7 @@ if __name__=="__main__":
     s.connect(("127.0.0.1", 14000))
     print(f"Socket connected to {'127.0.0.1'} port no. {14000}")
 
-    while True:
+    string = input("What message would you like to send?\n")
 
-        string = input("What message would you like to send?\n")
-
-        test = send_string(s, string)
-
-        if string == "quit":
-            print("Closing socket")
-            s.close()
-            break
+    test = send_string(s, string)
     
