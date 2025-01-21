@@ -3,6 +3,7 @@ import numpy
 from sklearn.neighbors import KNeighborsClassifier
 import pandas
 import pickle
+import networking.server as srv
 
 def gen_data():
     # Set random seed for reproducibility
@@ -60,14 +61,11 @@ def fit():
         pickle.dump(knn_classifier, f)
 
 
-def predict():
+def predict(new_x, new_y):
 
     loop = True
 
     while loop:
-        # Create new point and predict
-        new_x = int(input("Give value of Feature X: "))
-        new_y = int(input("Give value of Feature Y: "))
 
         with open("KNN_classifierl.pkl", "rb") as f:
             knn_classifier = pickle.load(f)
@@ -84,13 +82,13 @@ def predict():
 
         prediction = knn_classifier.predict(new_point)
 
-        print(f"Classifier predicted as class: {prediction}")
+        return prediction
 
         # Plot new point with predicted class
-        matplotlib.pyplot.scatter(numpy.append(x_values,[new_x]), numpy.append(y_values,[new_y]), c=labels + [prediction[0]])
-        matplotlib.pyplot.text(x=new_x-1.7, y=new_y-0.7, s=f"new point, class: {prediction[0]}")
-        matplotlib.pyplot.scatter(new_x, new_y, s=80, facecolors='none', edgecolors='r')
-        matplotlib.pyplot.show()
+        #matplotlib.pyplot.scatter(numpy.append(x_values,[new_x]), numpy.append(y_values,[new_y]), c=labels + [prediction[0]])
+        #matplotlib.pyplot.text(x=new_x-1.7, y=new_y-0.7, s=f"new point, class: {prediction[0]}")
+        #matplotlib.pyplot.scatter(new_x, new_y, s=80, facecolors='none', edgecolors='r')
+        #matplotlib.pyplot.show()
 
         if input("\nWould you like to make another prediction? (Y/N) ") == "N":
             loop = False
@@ -98,4 +96,10 @@ def predict():
 if __name__ == '__main__':
     gen_data()
     fit()
-    predict()
+    connection, _ = srv.listen()
+
+    while True:
+        srv.send_str(connection, "Welcome! Give your point to classify using KNN [x,y]")
+        received_string = srv.recv_str(connection)
+        prediction = predict(*[int(char) for char in received_string.split(",")])
+        srv.send_str(connection, f"Classifier predicted as class: {prediction}\n")
