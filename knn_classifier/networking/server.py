@@ -62,7 +62,11 @@ def send_str(connection, str , verbose = True):
         str (str): string to send to client
         verbose (bool, optional): turn on print statements. Defaults to True.
     """
-    connection.sendall(str.encode())
+    try:
+        connection.sendall(str.encode())
+    except ConnectionResetError:
+        return
+    
     if verbose: print(f"Sent string: {str}")
 
 

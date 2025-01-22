@@ -48,8 +48,8 @@ def fit():
     labels = df.loc[:,"Class"].to_list()
 
     # Display the given info
-    matplotlib.pyplot.scatter(x_values,y_values,c=labels)
-    matplotlib.pyplot.show()
+    #matplotlib.pyplot.scatter(x_values,y_values,c=labels)
+    #matplotlib.pyplot.show()
 
     # Reformat data and fit KNN classifier
     data = list(zip(x_values, y_values))
@@ -96,10 +96,15 @@ def predict(new_x, new_y):
 if __name__ == '__main__':
     gen_data()
     fit()
-    connection, _ = srv.listen()
-
     while True:
-        srv.send_str(connection, "Welcome! Give your point to classify using KNN [x,y]")
-        received_string = srv.recv_str(connection)
-        prediction = predict(*[int(char) for char in received_string.split(",")])
-        srv.send_str(connection, f"Classifier predicted as class: {prediction}\n")
+        connection, _ = srv.listen()
+
+        while True:
+            try:
+                srv.send_str(connection, "Welcome! Give your point to classify using KNN [x,y]")
+                received_string = srv.recv_str(connection)
+                prediction = predict(*[int(char) for char in received_string.split(",")])
+                srv.send_str(connection, f"Classifier predicted as class: {prediction}\n")
+            except ConnectionResetError as e:
+                print(f"{e.errno}: Client Disconnected, ")
+                break
