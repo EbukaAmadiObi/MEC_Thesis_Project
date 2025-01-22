@@ -1,4 +1,4 @@
 # Ignore the entire folder
 venv/
-!/knn_classifier/knn_dataset.csv
-!/knn_classifier/KNN_classifierl.pkl
+knn_classifier/knn_dataset.csv
+knn_classifier/KNN_classifierl.pkl
