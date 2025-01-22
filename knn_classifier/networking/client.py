@@ -53,7 +53,7 @@ if __name__=="__main__":
         recv_str(s)
 
         # Prompt message
-        string = input("What message would you like to send?\n")
+        string = input("\n")
 
         # Send string
         send_str(s, string)
