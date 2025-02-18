@@ -1,9 +1,7 @@
-import matplotlib.pyplot
 import numpy
 from sklearn.neighbors import KNeighborsClassifier
 import pandas
 import pickle
-import networking.server as srv
 
 def gen_data():
     # Set random seed for reproducibility
@@ -36,11 +34,11 @@ def gen_data():
         'Class': labels
     })
 
-    data.to_csv('knn_dataset.csv', index=False)
+    data.to_csv('knn_classifier/knn_dataset.csv', index=False)
 
 def fit():
     # Read data into csv
-    df = pandas.read_csv('knn_dataset.csv')
+    df = pandas.read_csv('knn_classifier/knn_dataset.csv')
 
     # Unpack into lists
     x_values = df.loc[:,"Feature_X"].to_list()
@@ -57,7 +55,7 @@ def fit():
     knn_classifier.fit(data, labels)
 
     # Serialize model and save
-    with open("KNN_classifierl.pkl", "wb") as f:
+    with open("knn_classifier/KNN_classifierl.pkl", "wb") as f:
         pickle.dump(knn_classifier, f)
 
 
@@ -67,11 +65,11 @@ def predict(new_x, new_y):
 
     while loop:
 
-        with open("KNN_classifierl.pkl", "rb") as f:
+        with open("knn_classifier/KNN_classifierl.pkl", "rb") as f:
             knn_classifier = pickle.load(f)
 
         # Read data into csv
-        df = pandas.read_csv('knn_dataset.csv')
+        df = pandas.read_csv('knn_classifier/knn_dataset.csv')
 
         # Unpack into lists
         x_values = df.loc[:,"Feature_X"].to_list()
@@ -96,6 +94,8 @@ def predict(new_x, new_y):
 if __name__ == '__main__':
     gen_data()
     fit()
+
+    #TODO: all of this needs to be running from within the docker container, not client server interface.
     while True:
         connection, _ = srv.listen()
 
