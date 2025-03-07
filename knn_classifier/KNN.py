@@ -82,12 +82,6 @@ def predict(new_x, new_y):
 
         return prediction
 
-        # Plot new point with predicted class
-        #matplotlib.pyplot.scatter(numpy.append(x_values,[new_x]), numpy.append(y_values,[new_y]), c=labels + [prediction[0]])
-        #matplotlib.pyplot.text(x=new_x-1.7, y=new_y-0.7, s=f"new point, class: {prediction[0]}")
-        #matplotlib.pyplot.scatter(new_x, new_y, s=80, facecolors='none', edgecolors='r')
-        #matplotlib.pyplot.show()
-
         if input("\nWould you like to make another prediction? (Y/N) ") == "N":
             loop = False
         print("\n")
