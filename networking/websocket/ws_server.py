@@ -5,6 +5,8 @@ import websockets
 from typing import Dict
 
 import websockets.exceptions
+import websockets.legacy
+import websockets.legacy.server
 import websockets.server
 
 # init docker client
@@ -30,6 +32,7 @@ async def handle_clients(websocket):
                 container_id = data["id"]   
                 command = data["input"]
                 asyncio.create_task(send_command(websocket, container_id, command))
+
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
     finally:
@@ -48,6 +51,9 @@ async def start_service(websocket, image_name):
         # store active session
         active_clients[container_id] = websocket
 
+        print(f"Client at {websocket.remote_address} started container {container_id} running image {image_name}")
+        print(active_clients)
+
         for line in container.logs(stream=True, follow=True):
             if container_id in active_clients and active_clients[container_id] == websocket:
                 await websocket.send(line.decode("utf-8"))
@@ -61,6 +67,9 @@ async def send_command(websocket, container_id, command):
     try:
         container = client.containers.get(container_id)
         exec_result = container.exec_run(command, stream=True)
+
+        print(f"Client at {websocket.remote_address} executed command {command} in container {container_id}")
+        print(active_clients)
 
         for line in exec_result.output:
             await websocket.send(line.decode("utf-8"))
