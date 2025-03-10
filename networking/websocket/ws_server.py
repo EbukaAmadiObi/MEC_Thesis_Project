@@ -23,9 +23,8 @@ async def handle_clients(websocket):
             action = data.get("action")     # get desired action from received data
 
             if action == "start":   # client wants to start service
-                container_id = data["id"]   #TODO: client should send name of model to be used that converts to a container id server side
-                asyncio.create_task(start_service(websocket, container_id))
-
+                image_name = data["image_name"]   #TODO: client should send name of model to be used that converts to a container id server side
+                asyncio.create_task(start_service(websocket, image_name))
 
             elif action == "send":  # client wants to send data to service within container
                 container_id = data["id"]   
@@ -39,14 +38,16 @@ async def handle_clients(websocket):
             if active_clients[container_id] == websocket:
                 del active_clients[container_id]
 
-async def start_service(websocket, container_id):
-    """start a container and attach client to it, stream data in real-time"""
-    container = client.containers.get(container_id)
-
-    # store active session
-    active_clients[container_id] = websocket
+async def start_service(websocket, image_name):
+    """start a container from given image and attach client to it, stream data in real-time"""
 
     try:
+        container = client.containers.run(image=image_name, detach=True)
+        container_id = container.id
+
+        # store active session
+        active_clients[container_id] = websocket
+
         for line in container.logs(stream=True, follow=True):
             if container_id in active_clients and active_clients[container_id] == websocket:
                 await websocket.send(line.decode("utf-8"))
@@ -68,8 +69,8 @@ async def send_command(websocket, container_id, command):
 
 async def main():
     """start websocket server"""
-    async with websockets.serve(handle_clients, "0.0.0.0", 3000):
-        print("WebSocket server running on 0.0.0.0:3000")
+    async with websockets.serve(handle_clients, "127.0.0.1", 3000):
+        print("WebSocket server running on localhost:3000")
         await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
