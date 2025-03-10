@@ -5,6 +5,7 @@ import websockets
 from typing import Dict
 
 import websockets.exceptions
+import websockets.server
 
 # init docker client
 client = docker.from_env()
@@ -53,3 +54,23 @@ async def start_service(websocket, container_id):
                 break   # stop sending if client disconnects
     except Exception as e:
         await websocket.send(json.dumps({"error": str(e)}))
+
+async def send_command(websocket, container_id, command):
+    """send command to running container"""
+    try:
+        container = client.containers.get(container_id)
+        exec_result = container.exec_run(command, stream=True)
+
+        for line in exec_result.output:
+            await websocket.send(line.decode("utf-8"))
+    except Exception as e:
+        await websocket.send(json.dumps({"error": str(e)}))
+
+async def main():
+    """start websocket server"""
+    async with websockets.serve(handle_clients, "0.0.0.0", 3000):
+        print("WebSocket server running on 0.0.0.0:3000")
+        await asyncio.Future()  # run forever
+
+if __name__ == "__main__":
+    asyncio.run(main())
