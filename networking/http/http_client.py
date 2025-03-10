@@ -1,3 +1,5 @@
+"""Test for MEC based MEC client"""
+
 import requests
 
 """# POST request

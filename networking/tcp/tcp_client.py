@@ -1,3 +1,4 @@
+"""Test for TCP based MEC client with CLI interface"""
 import socket
 import cmd
 

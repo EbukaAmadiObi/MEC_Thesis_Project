@@ -1,3 +1,4 @@
+"""Test for WebSocket based MEC server - most suitable so far"""
 import json
 import docker
 import asyncio
@@ -31,7 +32,7 @@ async def handle_clients(websocket):
                 command = data["input"]
                 asyncio.create_task(send_command(websocket, container_id, command))
 
-    except websockets.exceptions.ConnectionClosed:  # TODO: This doesn't work, and should delete the container too
+    except websockets.exceptions.ConnectionClosed:  # TODO: This doesn't work, and disconnecting a client should delete the container too
         print("Clients disconnected")
 
 async def start_service(websocket, image_name):

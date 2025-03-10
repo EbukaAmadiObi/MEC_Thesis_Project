@@ -1,3 +1,4 @@
+"""Test for TCP based MEC server with CLI interface"""
 import socket
 
 class EAIServer:

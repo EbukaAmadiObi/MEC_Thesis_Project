@@ -1,3 +1,4 @@
+"""Test for WebSocket based MEC client - most suitable I think"""
 import asyncio
 import websockets
 import json
