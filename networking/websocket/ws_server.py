@@ -2,7 +2,6 @@ import json
 import docker
 import asyncio
 import websockets
-from typing import Dict
 
 import websockets.exceptions
 import websockets.legacy
@@ -15,37 +14,31 @@ client = docker.from_env()
 # dict to store connected clients
 active_clients = {}
 
-#
 async def handle_clients(websocket):
     """Handle incoming websocket connections"""
     global active_clients
     try:
         async for message in websocket:
-            data = json.loads(message)  # load json data
-            action = data.get("action")     # get desired action from received data
+            data = json.loads(message)
+            action = data.get("action")
 
-            if action == "start":   # client wants to start service
-                image_name = data["image_name"]   #TODO: client should send name of model to be used that converts to a container id server side
+            if action == "start":   # client wants to start a new service
+                image_name = data["image_name"]   #TODO: client should send name of model to be used that converts to an image name server-side
                 asyncio.create_task(start_service(websocket, image_name))
 
             elif action == "send":  # client wants to send data to service within container
-                container_id = data["id"]   
+                container_id = data["id"]   # TODO: Container to send commands to should be determined server side from active clients dict
                 command = data["input"]
                 asyncio.create_task(send_command(websocket, container_id, command))
 
-    except websockets.exceptions.ConnectionClosed:
-        print("Client disconnected")
-    finally:
-        # remove client from active sessions
-        for container_id in list(active_clients.keys()):
-            if active_clients[container_id] == websocket:
-                del active_clients[container_id]
+    except websockets.exceptions.ConnectionClosed:  # TODO: This doesn't work, and should delete the container too
+        print("Clients disconnected")
 
 async def start_service(websocket, image_name):
-    """start a container from given image and attach client to it, stream data in real-time"""
+    """start a container from given image name and stream data to it in real-time"""
 
     try:
-        container = client.containers.run(image=image_name, detach=True)
+        container = client.containers.run(image=image_name, detach=True)    # TODO: manage cpu resources and priority and stuff
         container_id = container.id
 
         # store active session
@@ -78,8 +71,10 @@ async def send_command(websocket, container_id, command):
 
 async def main():
     """start websocket server"""
-    async with websockets.serve(handle_clients, "127.0.0.1", 3000):
-        print("WebSocket server running on localhost:3000")
+    ip = "localhost"
+    port = 3000
+    async with websockets.serve(handle_clients,ip, port):
+        print(f"WebSocket server running on {ip}:{port}")
         await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
