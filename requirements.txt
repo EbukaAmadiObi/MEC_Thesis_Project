@@ -1,0 +1,7 @@
+docker_py==1.10.6
+fastapi==0.115.11
+numpy==2.2.3
+pandas==2.2.3
+Requests==2.32.3
+scikit_learn==1.6.1
+websockets==15.0.1
