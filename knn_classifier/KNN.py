@@ -2,6 +2,7 @@ import numpy
 from sklearn.neighbors import KNeighborsClassifier
 import pandas
 import pickle
+import cmd
 
 def gen_data():
     # Set random seed for reproducibility
@@ -34,20 +35,16 @@ def gen_data():
         'Class': labels
     })
 
-    data.to_csv('knn_classifier/knn_dataset.csv', index=False)
+    data.to_csv('knn_dataset.csv', index=False)
 
 def fit():
     # Read data into csv
-    df = pandas.read_csv('knn_classifier/knn_dataset.csv')
+    df = pandas.read_csv('knn_dataset.csv')
 
     # Unpack into lists
     x_values = df.loc[:,"Feature_X"].to_list()
     y_values = df.loc[:,"Feature_Y"].to_list()
     labels = df.loc[:,"Class"].to_list()
-
-    # Display the given info
-    #matplotlib.pyplot.scatter(x_values,y_values,c=labels)
-    #matplotlib.pyplot.show()
 
     # Reformat data and fit KNN classifier
     data = list(zip(x_values, y_values))
@@ -55,7 +52,7 @@ def fit():
     knn_classifier.fit(data, labels)
 
     # Serialize model and save
-    with open("knn_classifier/KNN_classifierl.pkl", "wb") as f:
+    with open("KNN_classifierl.pkl", "wb") as f:
         pickle.dump(knn_classifier, f)
 
 
@@ -65,16 +62,11 @@ def predict(new_x, new_y):
 
     while loop:
 
-        with open("knn_classifier/KNN_classifierl.pkl", "rb") as f:
+        with open("KNN_classifierl.pkl", "rb") as f:
             knn_classifier = pickle.load(f)
 
         # Read data into csv
-        df = pandas.read_csv('knn_classifier/knn_dataset.csv')
-
-        # Unpack into lists
-        x_values = df.loc[:,"Feature_X"].to_list()
-        y_values = df.loc[:,"Feature_Y"].to_list()
-        labels = df.loc[:,"Class"].to_list()
+        df = pandas.read_csv('knn_dataset.csv')
 
         new_point = [(new_x, new_y)]
 
@@ -82,23 +74,26 @@ def predict(new_x, new_y):
 
         return prediction
 
-        if input("\nWould you like to make another prediction? (Y/N) ") == "N":
-            loop = False
-        print("\n")
+class KNNCLI(cmd.Cmd):
+    prompt = ">> "
+    intro = "Welcome to KNN CLI. Type \"help\" for available commands."
+
+    def __init__(self):
+        super().__init__()
+
+    def do_predict(self, arg):
+        """Predict x and y values"""
+        if not arg:
+            print("No arguments given, should be in the format predict \"x\", \"y\"")
+        else:
+            x, y = arg.split(" ")
+            print(f"Predicting for values x = {x}, y = {y}")
+            prediction = predict(float(x),float(y))
+            print(prediction)
 if __name__ == '__main__':
     gen_data()
     fit()
 
-    #TODO: all of this needs to be running from within the docker container, not client server interface.
-    while True:
-        connection, _ = srv.listen()
-
-        while True:
-            try:
-                srv.send_str(connection, "Welcome! Give your point to classify using KNN [x,y]")
-                received_string = srv.recv_str(connection)
-                prediction = predict(*[int(char) for char in received_string.split(",")])
-                srv.send_str(connection, f"Classifier predicted as class: {prediction}\n")
-            except ConnectionResetError as e:
-                print(f"{e.errno}: Client Disconnected, ")
-                break
+    cli = KNNCLI()
+    
+    cli.cmdloop()
