@@ -5,9 +5,6 @@ import asyncio
 import websockets
 
 import websockets.exceptions
-import websockets.legacy
-import websockets.legacy.server
-import websockets.server
 
 # init docker client
 client = docker.from_env()
