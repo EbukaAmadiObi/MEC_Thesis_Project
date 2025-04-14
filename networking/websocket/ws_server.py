@@ -57,13 +57,32 @@ async def send_command(websocket, container_id, command):
     """send command to running container"""
     try:
         container = client.containers.get(container_id)
-        exec_result = container.exec_run(command, stream=True)
-
+        
+        # Create an exec instance with proper stdin/stdout setup
+        exec_id = container.client.api.exec_create(
+            container_id,
+            command,
+            stdin=True,
+            tty=True
+        )
+        
+        # Start the exec instance with a socket
+        socket = container.client.api.exec_start(
+            exec_id['Id'],
+            socket=True,
+            tty=True
+        )
+        
         print(f"Client at {websocket.remote_address} executed command {command} in container {container_id}")
         print(active_clients)
 
-        for line in exec_result.output:
+        # Send the command to the container's stdin
+        socket._sock.sendall(command.encode() + b'\n')
+        
+        # Stream the output
+        for line in socket:
             await websocket.send(line.decode("utf-8"))
+            
     except Exception as e:
         await websocket.send(json.dumps({"error": str(e)}))
 

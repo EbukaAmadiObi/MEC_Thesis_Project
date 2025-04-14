@@ -2,6 +2,8 @@
 
 import socket
 import json
+import sys
+import threading
 
 from utils import send_json, decode_json
 
@@ -66,9 +68,58 @@ class MECClient:
         except Exception as e:
             print(f"Exception occurred while sending start command: {str(e)}")
             return False
+        
+    def start_stream(self):
+        self.running = True
+
+        server_output = threading.Thread(target=self.handle_server_output)
+        user_input = threading.Thread(target=self.handle_user_input)
+
+        server_output.daemon = True
+        user_input.daemon = True
+
+        server_output.start()
+        user_input.start()
+
+        server_output.join()
+        user_input.join()
+
+
+    def handle_server_output(self):
+        """Handle output from the server, display to user"""
+        try:
+            while True:
+                data = self.server_socket.recv(4096)
+                if not data:
+                    print("Connection closed by server")
+                    self.running = False
+                    break
+
+                # Write container output
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+        except Exception as e:
+            print(f"Error receiving container output: {str(e)}")
+            self.running = False
     
-    def send(self, dict: dict):
-        send_json(self.server_socket, dict)
+    def handle_user_input(self):
+        """Handle input from the user, sending it to the server"""
+        try:
+            while True:
+                data = sys.stdin.buffer.read1(4096)  # Read available data
+                if not data:
+                    continue
+                
+                # Send user input to container via server
+                try:
+                    self.server_socket.sendall(data)
+                except (BrokenPipeError, ConnectionResetError):
+                    print("Connection lost")
+                    self.running = False
+                    break
+        except Exception as e:
+            print(f"Error sending user input: {str(e)}")
+            self.running = False
 
     def receive_json(self) -> dict[str, str]:     # TODO: add timeout - ATM if data is improperly formatted, client will be stuck in receive loop
         data = b""
@@ -90,5 +141,6 @@ if __name__ == "__main__":
     client = MECClient()
     if client.connect():
         client.start_service("ebukaamadiobi/knn-model")
+        client.start_stream()
     else:
         print("Failed to connect to the server.")

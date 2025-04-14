@@ -20,6 +20,7 @@ class MECServer:
     def start(self):
         """Start the websocket server"""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Enable address reuse
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(5)
         self.running = True
@@ -107,14 +108,15 @@ class MECServer:
         """Start bidirectional stream, connecting container and client"""
         print(f"Starting stream for container: {container.name}")
 
-        # Get container streams
+        # Get container streams with proper configuration
         container_socket = self.docker_client.api.attach_socket(
             container.id, 
             params={
                 'stdin': 1,
                 'stdout': 1,
                 'stderr': 1,
-                'stream': 1
+                'stream': 1,
+                'logs': 1
             }
         )
 
@@ -149,7 +151,7 @@ class MECServer:
                 
                 # Send data to container
                 try:
-                    container_socket.write(data)
+                    container_socket._sock.sendall(data)
                 except (BrokenPipeError, ConnectionResetError):
                     print(f"Container {container_name} stream closed")
                     break
