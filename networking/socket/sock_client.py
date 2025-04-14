@@ -15,6 +15,7 @@ class MECClient:
     
     def connect(self) -> bool:
         """Connect to the MEC server"""
+        # Set up socket, spefifying address family and protocol
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.server_socket.connect((self.host, self.port))
@@ -29,7 +30,6 @@ class MECClient:
     
     def start_service(self, image_name: str, command: str=None, environment: str=None) -> bool:
         """Send command to start service on server"""
-
         command_req = {
             "action": "start_service",
             "image": image_name
@@ -43,6 +43,7 @@ class MECClient:
             send_json(self.server_socket, command_req)
             print(f"Sent \"start service\" command for \"{image_name}\"")
 
+            # Receive ack response when comamnd is received - manage errors
             response = self.receive_json()
             if "error" in response:
                 print(f"Error in starting service: {response["error"]}")
@@ -50,12 +51,13 @@ class MECClient:
             elif response.get("status") == "starting_service":
                 print(f"Server is starting service...")
 
+            # Receive again when service is started
             response = self.receive_json()
             if "error" in response:
                 print(f"Error in starting service: {response["error"]}")
                 return False
             elif response.get("status") == "service_started":
-                print(f"Service started successfully with container name {response["name"]}")
+                print(f"Service started successfully with container name \"{response["name"]}\"")
                 return True
             
             print(f"Unexpected response: {response}")
@@ -68,9 +70,10 @@ class MECClient:
     def send(self, dict: dict):
         send_json(self.server_socket, dict)
 
-    def receive_json(self) -> dict[str, str]:     # TODO: add timeout
+    def receive_json(self) -> dict[str, str]:     # TODO: add timeout - ATM if data is improperly formatted, client will be stuck in receive loop
         data = b""
         """Receive and parse JSON response from server"""
+        # Receive chunks of data until no more is left
         while True:
             chunk = self.server_socket.recv(4096)
             if not chunk:
@@ -79,7 +82,7 @@ class MECClient:
             data += chunk
             try:
                 return decode_json(data)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError:    # If json is imporperly formatted, there is more data to receive
                 continue
         
 

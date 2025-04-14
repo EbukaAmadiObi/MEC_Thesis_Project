@@ -74,6 +74,8 @@ class MECServer:
                 # Add to active containers list
                 self.active_containters[client_id] = container
 
+                self.start_stream(container, client_socket)
+
             except json.JSONDecodeError as e:
                 print(f"Unexpected error parsing JSON from {client_id}: {str(e)}")
                 send_json(client_socket, {"error":str(e)})
@@ -98,9 +100,102 @@ class MECServer:
             remove=True         # Auto-remove container after it stops
         )
 
-        print(f"Container started: {container.id}")
+        print(f"Container started: {container.name}")
         return container
+    
+    def start_stream(self, container: Container, client_socket: socket.socket):
+        """Start bidirectional stream, connecting container and client"""
+        print(f"Starting stream for container: {container.name}")
 
+        # Get container streams
+        container_socket = self.docker_client.api.attach_socket(
+            container.id, 
+            params={
+                'stdin': 1,
+                'stdout': 1,
+                'stderr': 1,
+                'stream': 1
+            }
+        )
+
+        # Create threads for streaming both ways
+        client_to_container = threading.Thread(
+            target=self.client_to_container_stream,
+            args=(client_socket, container_socket, container.name)
+        )
+        client_to_container.daemon = True
+
+        container_to_client = threading.Thread(
+            target=self.container_to_client_stream,
+            args=(client_socket, container_socket, container.name)
+        )
+        container_to_client.daemon = True
+
+        client_to_container.start()
+        container_to_client.start()
+
+        # Wait for threads to complete (container exit or client disconnect)
+        container_to_client.join()
+        client_to_container.join()
+    
+    def client_to_container_stream(self, client_socket: socket.socket, container_socket, container_name):
+        """Stream data from client to container"""
+        try:
+            while True:
+                data = client_socket.recv(4096)
+                if not data:
+                    print(f"Client disconnected from container {container_name}")
+                    break
+                
+                # Send data to container
+                try:
+                    container_socket.write(data)
+                except (BrokenPipeError, ConnectionResetError):
+                    print(f"Container {container_name} stream closed")
+                    break
+                
+                # Check if container is still running
+                try:
+                    container = self.docker_client.containers.get(container_name)
+                    if container.status != "running":
+                        print(f"Container {container_name} is no longer running (status: {container.status})")
+                        break
+                except docker.errors.NotFound:
+                    print(f"Container {container_name} no longer exists")
+                    break
+        except Exception as e:
+            print(f"Error streaming to container {container_name}: {str(e)}")
+        finally:
+            print(f"Stopped streaming from client to container {container_name}")
+        
+    def container_to_client_stream(self, client_socket, container_socket, container_name):
+        try:
+            while True:
+                data = container_socket.read(4096)  # read data from container
+                if not data:
+                    print(f"Container {container_name} stream closed")
+                    break
+            
+                # Send data to client
+                try:
+                    client_socket.sendall(data)
+                except (BrokenPipeError, ConnectionResetError):
+                    print(f"Client disconnected while streaming from container {container_name}")
+                    break
+                
+                # Check if container is still running
+                try:
+                    container = self.docker_client.containers.get(container_name)
+                    if container.status != "running":
+                        print(f"Container {container_name} is no longer running (status: {container.status})")
+                        break
+                except docker.errors.NotFound:
+                    print(f"Container {container_name} no longer exists")
+                    break
+        except Exception as e:
+            print(f"Error streaming from container {container_name}: {str(e)}")
+        finally:
+            print(f"Stopped streaming from container {container_name} to client")
 
 if __name__ == "__main__":
     server = MECServer()
