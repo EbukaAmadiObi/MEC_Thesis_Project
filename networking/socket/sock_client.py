@@ -1,6 +1,7 @@
 """Socket based MEC client"""
 
 import socket
+import json
 
 class MECClient:
     def __init__(self, host="localhost", port=3000):
@@ -23,12 +24,16 @@ class MECClient:
         except Exception as e:
             print(f"Connection error: {str(e)}")
             return False
+    
+    def send(self, str: str):
+        self.server_socket.sendall(json.dumps({"string": str}).encode('utf-8'))
         
 
 if __name__ == "__main__":
     client = MECClient()
     if client.connect():
-        # Here you can add code to send commands to the server
-        pass
+        print("Client connected successfully.")
+        string = input("What to send?\n")
+        client.send(string)
     else:
         print("Failed to connect to the server.")
