@@ -3,7 +3,7 @@
 import socket
 import json
 
-from utils import send_json
+from utils import send_json, decode_json
 
 class MECClient:
     def __init__(self, host="localhost", port=3000):
@@ -27,15 +27,66 @@ class MECClient:
             print(f"Connection error: {str(e)}")
             return False
     
-    def send(self, str: str):
-        send_json(self.server_socket, {"string": str})
+    def start_service(self, image_name: str, command: str=None, environment: str=None):
+        """Send command to start service on server"""
+
+        command_req = {
+            "action": "start_service",
+            "image": image_name
+            }
+        if command:
+            command_req["command"] = command
+        if environment:
+            command_req["environment"] = environment
+        
+        try:
+            send_json(self.server_socket, command_req)
+            print("Sent start service command")
+
+            response = self.receive_json()
+            if "error" in response:
+                print(f"Error in starting service: {response["error"]}")
+                return False
+            elif response.get("status") == "starting_service":
+                print(f"Server is starting service...")
+
+            response = self.receive_json()
+            if "error" in response:
+                print(f"Error in starting service: {response["error"]}")
+                return False
+            elif response.get("status") == "service_started":
+                print(f"Service started successfully")
+                return True
+            
+            print(f"Unexpected response: {response}")
+            return False
+
+        except Exception as e:
+            print(f"Exception occurred while sending start command: {str(e)}")
+            return False
+    
+    def send(self, dict: dict):
+        send_json(self.server_socket, dict)
+
+    def receive_json(self):     # TODO: add timeout
+        data = b""
+        """Receive and parse JSON response from server"""
+        while True:
+            chunk = self.server_socket.recv(4096)
+            if not chunk:
+                print("Connection closed by server")
+                return None
+            data += chunk
+            try:
+                return decode_json(data)
+            except json.JSONDecodeError:
+                continue
         
 
 if __name__ == "__main__":
     client = MECClient()
     if client.connect():
         print("Client connected successfully.")
-        string = input("What to send?\n")
-        client.send(string)
+        client.start_service("ebukaamadiobi/knn-model")
     else:
         print("Failed to connect to the server.")

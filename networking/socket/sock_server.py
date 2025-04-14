@@ -3,15 +3,17 @@
 import socket
 import threading
 import json
+import docker, docker.errors
 
 from utils import send_json, decode_json
 
 class MECServer:
-    def __init__(self, host: str = "localhost", port: int = 3000):
+    def __init__(self, host: str="localhost", port: int=3000):
         self.host = host
         self.port = port
+        self.docker_client = docker.from_env()
         self.running: bool = False
-        self.containters = {}
+        self.active_containters = {}
         self.server_socket: socket.socket = None
 
     def start(self):
@@ -52,11 +54,39 @@ class MECServer:
                 # Send ack
                 send_json(client_socket, {"status": "starting_service"})
 
+                # Start containter
+                container = self.start_container(command["image"], command.get("command"), command.get("environment", {}))
+
+                # Send status update
+                send_json(client_socket, {"status":"service_started"})
+                # Add to active containers list
+                self.active_containters[client_id] = container
+
             except json.JSONDecodeError as e:
                 print(f"Unexpected error parsing JSON from {client_id}: {str(e)}")
                 send_json(client_socket, {"error":str(e)})
-        except e:
+            except docker.errors.ImageNotFound:
+                print(f"Docker image '{command["image"]}' not found")
+                send_json(client_socket, {"error":f"Docker image \"{command["image"]}\" not found"})
+        except Exception as e:
             print(f"Unexpected error handling client {client_id}: {str(e)}")
+    
+    def start_container(self, image_name: str, command=None, environment=None):
+        """Start a Docker container with given image and other parameters"""
+        print(f"Starting container from image: {image_name}")
+
+        container = self.docker_client.containers.run(
+            image_name,
+            command=command,
+            environment=environment,
+            detach=True,        # Run container in background
+            stdin_open=True,    # Keep STDIN open for input
+            tty=True,           # Simulate a terminal interface
+            remove=True         # Auto-remove container after it stops
+        )
+
+        print(f"Container started: {container.id}")
+        return container
 
 
 if __name__ == "__main__":
