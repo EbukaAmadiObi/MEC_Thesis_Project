@@ -3,6 +3,8 @@
 import socket
 import json
 
+from utils import send_json
+
 class MECClient:
     def __init__(self, host="localhost", port=3000):
         self.host = host
@@ -26,7 +28,7 @@ class MECClient:
             return False
     
     def send(self, str: str):
-        self.server_socket.sendall(json.dumps({"string": str}).encode('utf-8'))
+        send_json(self.server_socket, {"string": str})
         
 
 if __name__ == "__main__":

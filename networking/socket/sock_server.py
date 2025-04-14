@@ -4,6 +4,8 @@ import socket
 import threading
 import json
 
+from utils import send_json, decode_json
+
 class MECServer:
     def __init__(self, host: str = "localhost", port: int = 3000):
         self.host = host
@@ -36,18 +38,23 @@ class MECServer:
         """Handle individual client connection"""
         client_id = f"{addr[0]}:{addr[1]}"
         try:
-            # Receive 4096 bits from 
+            # Receive 4096 bit blocks from client
             data = client_socket.recv(4096)
             if not data:
                 print(f"Received empty data from {client_id}")
                 return
             try:
-                command = json.loads(data.decode("utf-8"))
-                print(f"received command: {str(command)}")
+                command = decode_json(data)
+                print(f"Received command from {client_id}: {str(command)}")
+
+                #TODO Check command format
+
+                # Send ack
+                send_json(client_socket, {"status": "starting_service"})
 
             except json.JSONDecodeError as e:
                 print(f"Unexpected error parsing JSON from {client_id}: {str(e)}")
-                client_socket.sendall(json.dumps({"error":str(e)}))
+                send_json(client_socket, {"error":str(e)})
         except e:
             print(f"Unexpected error handling client {client_id}: {str(e)}")
 
