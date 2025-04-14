@@ -84,7 +84,6 @@ class MECClient:
         server_output.join()
         user_input.join()
 
-
     def handle_server_output(self):
         """Handle output from the server, display to user"""
         try:
@@ -136,7 +135,6 @@ class MECClient:
             except json.JSONDecodeError:    # If json is imporperly formatted, there is more data to receive
                 continue
         
-
 if __name__ == "__main__":
     client = MECClient()
     if client.connect():

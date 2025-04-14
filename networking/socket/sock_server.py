@@ -139,6 +139,11 @@ class MECServer:
         # Wait for threads to complete (container exit or client disconnect)
         container_to_client.join()
         client_to_container.join()
+
+        print("Deleting threads...")
+        del container_to_client
+        del client_to_container
+        print("Deleted!")
     
     def client_to_container_stream(self, client_socket: socket.socket, container_socket, container_name):
         """Stream data from client to container"""
