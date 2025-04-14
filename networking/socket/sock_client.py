@@ -13,7 +13,7 @@ class MECClient:
         self.container_id = None
         self.server_socket = None
     
-    def connect(self):
+    def connect(self) -> bool:
         """Connect to the MEC server"""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -27,7 +27,7 @@ class MECClient:
             print(f"Connection error: {str(e)}")
             return False
     
-    def start_service(self, image_name: str, command: str=None, environment: str=None):
+    def start_service(self, image_name: str, command: str=None, environment: str=None) -> bool:
         """Send command to start service on server"""
 
         command_req = {
@@ -41,7 +41,7 @@ class MECClient:
         
         try:
             send_json(self.server_socket, command_req)
-            print("Sent start service command")
+            print(f"Sent \"start service\" command for \"{image_name}\"")
 
             response = self.receive_json()
             if "error" in response:
@@ -55,7 +55,7 @@ class MECClient:
                 print(f"Error in starting service: {response["error"]}")
                 return False
             elif response.get("status") == "service_started":
-                print(f"Service started successfully")
+                print(f"Service started successfully with container name {response["name"]}")
                 return True
             
             print(f"Unexpected response: {response}")
@@ -68,7 +68,7 @@ class MECClient:
     def send(self, dict: dict):
         send_json(self.server_socket, dict)
 
-    def receive_json(self):     # TODO: add timeout
+    def receive_json(self) -> dict[str, str]:     # TODO: add timeout
         data = b""
         """Receive and parse JSON response from server"""
         while True:
@@ -86,7 +86,6 @@ class MECClient:
 if __name__ == "__main__":
     client = MECClient()
     if client.connect():
-        print("Client connected successfully.")
         client.start_service("ebukaamadiobi/knn-model")
     else:
         print("Failed to connect to the server.")

@@ -4,6 +4,7 @@ import socket
 import threading
 import json
 import docker, docker.errors
+from docker.models.containers import Container
 
 from utils import send_json, decode_json
 
@@ -34,7 +35,14 @@ class MECServer:
                 client_thread.daemon = True
                 client_thread.start()
         except KeyboardInterrupt:
-            print("Server stopped by user")
+            print("\nServer stopped by user")
+
+            # Close server socket
+            if self.server_socket:
+                self.server_socket.close()
+                self.server_socket = None
+            
+            self.running = False
     
     def handle_client(self, client_socket: socket.socket, addr: tuple[str, int]):
         """Handle individual client connection"""
@@ -58,7 +66,11 @@ class MECServer:
                 container = self.start_container(command["image"], command.get("command"), command.get("environment", {}))
 
                 # Send status update
-                send_json(client_socket, {"status":"service_started"})
+                send_json(client_socket, {
+                    "status":"service_started",
+                    "container_id": container.id,
+                    "name": container.name
+                    })
                 # Add to active containers list
                 self.active_containters[client_id] = container
 
@@ -70,8 +82,9 @@ class MECServer:
                 send_json(client_socket, {"error":f"Docker image \"{command["image"]}\" not found"})
         except Exception as e:
             print(f"Unexpected error handling client {client_id}: {str(e)}")
+            send_json(client_socket, {"error":f"{str(e)}"})
     
-    def start_container(self, image_name: str, command=None, environment=None):
+    def start_container(self, image_name: str, command=None, environment=None) -> Container:
         """Start a Docker container with given image and other parameters"""
         print(f"Starting container from image: {image_name}")
 
