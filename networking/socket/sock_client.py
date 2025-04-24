@@ -6,6 +6,7 @@ import sys
 import threading
 
 from utils import send_json, decode_json
+import time
 
 class MECClient:
     def __init__(self, host="localhost", port=3000):
@@ -30,36 +31,41 @@ class MECClient:
             print(f"Connection error: {str(e)}")
             return False
     
-    def start_service(self, image_name: str, command: str=None, environment: str=None) -> bool:
-        """Send command to start service on server"""
+    def start_service(self, image_name: str, risk: int=0, command: str=None, environment: str=None) -> bool:
+        """Send command to start service on server and measure response time"""
         command_req = {
             "action": "start_service",
-            "image": image_name
-            }
+            "image": image_name,
+            "risk": risk    # Risk level for the service, as outlined by the EU AI Act
+        }
         if command:
             command_req["command"] = command
         if environment:
             command_req["environment"] = environment
         
         try:
+            start_time = time.time()  # Start timing
             send_json(self.server_socket, command_req)
             print(f"Sent \"start service\" command for \"{image_name}\"")
 
-            # Receive ack response when comamnd is received - manage errors
+            # Receive ack response when command is received - manage errors
             response = self.receive_json()
             if "error" in response:
-                print(f"Error in starting service: {response["error"]}")
+                print(f"Error in starting service: {response['error']}")
                 return False
             elif response.get("status") == "starting_service":
                 print(f"Server is starting service...")
 
             # Receive again when service is started
             response = self.receive_json()
+            end_time = time.time()  # End timing
+
             if "error" in response:
-                print(f"Error in starting service: {response["error"]}")
+                print(f"Error in starting service: {response['error']}")
                 return False
             elif response.get("status") == "service_started":
-                print(f"Service started successfully with container name \"{response["name"]}\"")
+                print(f"Service started successfully with container name \"{response['name']}\"")
+                print(f"Time taken to start service: {end_time - start_time:.2f} seconds")
                 return True
             
             print(f"Unexpected response: {response}")
@@ -94,9 +100,13 @@ class MECClient:
                     self.running = False
                     break
 
+                #self.last_received_timestamp = time.time()
+
                 # Write container output
                 sys.stdout.buffer.write(data)
                 sys.stdout.buffer.flush()
+
+                #print(self.last_received_timestamp-self.last_sent_timestamp)
         except Exception as e:
             print(f"Error receiving container output: {str(e)}")
             self.running = False
@@ -112,6 +122,7 @@ class MECClient:
                 # Send user input to container via server
                 try:
                     self.server_socket.sendall(data)
+                    #self.last_sent_timestamp = time.time()
                 except (BrokenPipeError, ConnectionResetError):
                     print("Connection lost")
                     self.running = False
@@ -120,7 +131,7 @@ class MECClient:
             print(f"Error sending user input: {str(e)}")
             self.running = False
 
-    def receive_json(self) -> dict[str, str]:     # TODO: add timeout - ATM if data is improperly formatted, client will be stuck in receive loop
+    def receive_json(self) -> dict[str, str]:
         data = b""
         """Receive and parse JSON response from server"""
         # Receive chunks of data until no more is left
@@ -136,7 +147,7 @@ class MECClient:
                 continue
         
 if __name__ == "__main__":
-    client = MECClient()
+    client = MECClient(host="localhost", port=3000)
     if client.connect():
         client.start_service("ebukaamadiobi/knn-model")
         client.start_stream()

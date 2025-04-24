@@ -58,10 +58,21 @@ class MECServer:
                 command = decode_json(data)
                 print(f"Received command from {client_id}: {str(command)}")
 
-                #TODO Check command format
-
                 # Send ack
                 send_json(client_socket, {"status": "starting_service"})
+
+                # Manage risk level - As per the EU AI Act
+                risk_level = command["risk"]        
+                match risk_level:
+                    case 0:
+                        print("Minimal risk service.")
+                        # Risk mitigation logic goes here
+                    case 1:
+                        print("Limited risk service.")
+                        # Risk mitigation logic goes here
+                    case 2:
+                        print("High risk service!")
+                        # Risk mitigation logic goes here
 
                 # Start containter
                 container = self.start_container(command["image"], command.get("command"), command.get("environment", {}))
@@ -80,6 +91,10 @@ class MECServer:
             except json.JSONDecodeError as e:
                 print(f"Unexpected error parsing JSON from {client_id}: {str(e)}")
                 send_json(client_socket, {"error":str(e)})
+            except KeyError as e:
+                error_msg = f"Malformed start request, missing key {e}"
+                print(error_msg)
+                send_json(client_socket, {"error":f"{error_msg}"})
             except docker.errors.ImageNotFound:
                 print(f"Docker image '{command["image"]}' not found")
                 send_json(client_socket, {"error":f"Docker image \"{command["image"]}\" not found"})
